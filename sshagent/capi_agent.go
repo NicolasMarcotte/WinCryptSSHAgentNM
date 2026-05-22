@@ -5,12 +5,14 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+
 	"github.com/buptczq/WinCryptSSHAgent/capi"
 	"github.com/buptczq/WinCryptSSHAgent/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"os"
-	"sync"
 )
 
 type sshKey struct {
@@ -51,6 +53,10 @@ func (s *CAPIAgent) loadCerts() (err error) {
 			cert.Free()
 			continue
 		}
+		if !FilterCertificateLogon(cert) {
+			cert.Free()
+			continue
+		}
 		pub, err := ssh.NewPublicKey(cert.PublicKey)
 		if err != nil {
 			cert.Free()
@@ -81,6 +87,10 @@ func (s *CAPIAgent) loadCerts() (err error) {
 		}
 	}
 	return
+}
+
+func FilterCertificateLogon(cert *capi.Certificate) bool {
+	return !strings.Contains(cert.Subject.CommonName, "/login.windows.net/")
 }
 
 func (s *CAPIAgent) List() (keys []*agent.Key, err error) {
